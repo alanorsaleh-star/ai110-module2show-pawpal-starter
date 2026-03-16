@@ -51,6 +51,16 @@ class Pet:
     age: Optional[int] = None
     needs: List[str] = field(default_factory=list)
     health_notes: Optional[str] = None
+    tasks: List["Task"] = field(default_factory=list)
+
+    @property
+    def task_count(self) -> int:
+        """Return how many tasks are assigned to this pet."""
+        return len(self.tasks)
+
+    def add_task(self, task: "Task") -> None:
+        """Assign a task to this pet."""
+        self.tasks.append(task)
 
     def add_need(self, category: str, details: Optional[str] = None) -> None:
         """Add a new care need/category for the pet."""
@@ -70,9 +80,10 @@ class Task:
     """Represents a care task that can be scheduled."""
 
     title: str
-    duration_minutes: int
-    priority: str
-    category: str
+    scheduled_time: Optional[str] = None
+    duration_minutes: int = 0
+    priority: str = "medium"
+    category: str = "general"
     preferred_time: Optional[tuple[time, time]] = None
     notes: Optional[str] = None
     is_recurring: bool = False
