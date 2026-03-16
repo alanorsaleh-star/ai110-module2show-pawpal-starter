@@ -73,6 +73,27 @@ Methods:
 - Briefly describe your initial UML design.
 - What classes did you include, and what responsibilities did you assign to each?
 
+- PetOwner
+Role: Holds the owner’s profile and scheduling constraints.
+Responsibilities: Store availability/preferences, answer questions like “is this task okay for the owner’s schedule?”
+
+- Pet
+Role: Represents the animal being cared for.
+Responsibilities: Track pet identity + needs (e.g., “needs feeding”, “needs meds”), and expose a summary or “needs attention” list.
+
+- Task
+Role: Models a single care activity (walk, feed, meds, etc.).
+Responsibilities: Store duration/priority/category/preferred time, allow marking complete/rescheduling, and provide a human-friendly repr.
+
+- Scheduler
+Role: The “brain” that turns tasks + constraints into a daily plan.
+Responsibilities: Rank tasks, fit them into available time windows, generate a Schedule, and explain why it chose that plan.
+
+- Schedule (supporting class)
+Role: Holds the output plan for a specific date.
+Responsibilities: Maintain ordered tasks, detect conflicts, and provide a summary/explanation.
+
+
 **b. Design changes**
 
 - Did your design change during implementation?
