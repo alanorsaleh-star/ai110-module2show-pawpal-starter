@@ -110,8 +110,8 @@ Responsibilities: Maintain ordered tasks, detect conflicts, and provide a summar
 
 **b. Tradeoffs**
 
-- Describe one tradeoff your scheduler makes.
-- Why is that tradeoff reasonable for this scenario?
+- One tradeoff the scheduler makes is that it only detects conflicts when two tasks overlap exactly in time ranges (based on scheduled time + duration or preferred time window). It does not attempt to resolve conflicts, merge tasks, or reason about partial overlaps beyond a simple time intersection check.
+- This is reasonable for the project scope because it keeps the logic lightweight and predictable, and it provides a clear warning to the user without introducing complex scheduling heuristics that are harder to test and explain.
 
 ---
 

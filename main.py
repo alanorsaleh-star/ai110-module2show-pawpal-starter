@@ -2,7 +2,7 @@
 
 from datetime import datetime, time
 
-from pawpal_system import PetOwner, Pet, Schedule, Task
+from pawpal_system import PetOwner, Pet, Schedule, Scheduler, Task
 
 
 def format_task(task: Task) -> str:
@@ -30,7 +30,7 @@ def main() -> None:
         duration_minutes=10,
         priority="high",
         category="feeding",
-        preferred_time=(time(7, 0), time(7, 30)),
+        preferred_time=(time(8, 30), time(9, 0)),
         notes="Dry kibble + wet food",
     )
 
@@ -43,15 +43,22 @@ def main() -> None:
         notes="Give pill with a treat",
     )
 
-    schedule = Schedule(date=datetime.now())
-    schedule.add_task(task1)
-    schedule.add_task(task2)
-    schedule.add_task(task3)
+    # Create a scheduler for pet1 (demonstrates conflict detection)
+    scheduler = Scheduler(owner=owner, pet=pet1, tasks=[task1, task2, task3])
+    schedule = scheduler.generate_plan(date=datetime.now())
+
+    # Detect conflicts and warn if found.
+    conflicts = scheduler.get_conflicts(schedule)
 
     print("Today's Schedule")
     print("----------------")
     for t in schedule.tasks:
         print(format_task(t))
+
+    if conflicts:
+        print("\nWarnings:")
+        for w in conflicts:
+            print(w)
 
 
 if __name__ == "__main__":

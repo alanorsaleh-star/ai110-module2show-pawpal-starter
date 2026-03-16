@@ -10,7 +10,7 @@ The implementations here are intentionally minimal skeletons.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any, Dict, List, Optional
 
 
@@ -88,11 +88,43 @@ class Task:
     notes: Optional[str] = None
     is_recurring: bool = False
     recurrence_pattern: Optional[str] = None
+    due_date: Optional[date] = None
     completed: bool = False
 
-    def mark_complete(self) -> None:
-        """Mark the task as completed."""
+    def mark_complete(self) -> Optional["Task"]:
+        """Mark the task as completed.
+
+        If the task is recurring (daily/weekly), return a new Task instance
+        representing the next occurrence.
+        """
         self.completed = True
+
+        if not self.is_recurring or not self.recurrence_pattern:
+            return None
+
+        # Normalize recurrence keyword to lower-case for easier matching.
+        pattern = self.recurrence_pattern.strip().lower()
+        if pattern not in {"daily", "weekly"}:
+            return None
+
+        # Calculate the next due date using timedelta.
+        # For daily recurrence, add 1 day. For weekly, add 7 days.
+        base_date = self.due_date or date.today()
+        delta = timedelta(days=1 if pattern == "daily" else 7)
+        next_due = base_date + delta
+
+        return Task(
+            title=self.title,
+            scheduled_time=self.scheduled_time,
+            duration_minutes=self.duration_minutes,
+            priority=self.priority,
+            category=self.category,
+            preferred_time=self.preferred_time,
+            notes=self.notes,
+            is_recurring=self.is_recurring,
+            recurrence_pattern=self.recurrence_pattern,
+            due_date=next_due,
+        )
 
     def reschedule(self, new_start: datetime) -> None:
         """Reschedule the task to a new start time."""
@@ -148,9 +180,50 @@ class Scheduler:
         self.day_start = day_start
         self.day_end = day_end
 
+    @staticmethod
+    def _parse_time(value: Optional[str]) -> Optional[time]:
+        """Parse a time string (HH:MM) into a `time` object."""
+        if not value:
+            return None
+        try:
+            return datetime.strptime(value, "%H:%M").time()
+        except ValueError:
+            return None
+
+    @staticmethod
+    def _task_start_time(task: Task) -> Optional[time]:
+        """Determine the earliest known start time for a task."""
+        # Prefer an explicitly scheduled time
+        if task.scheduled_time:
+            parsed = Scheduler._parse_time(task.scheduled_time)
+            if parsed:
+                return parsed
+
+        # Fall back to the preferred time window, if available
+        if task.preferred_time:
+            return task.preferred_time[0]
+
+        return None
+
+    def sort_by_time(self, tasks: Optional[List[Task]] = None) -> List[Task]:
+        """Sort tasks by start time and filter out tasks without any time data."""
+        tasks = tasks if tasks is not None else self.tasks
+
+        def sort_key(task: Task) -> time:
+            start = self._task_start_time(task)
+            # Put tasks without a time at the end
+            return start or time.max
+
+        # Only keep tasks that have at least some time information.
+        filtered = [t for t in tasks if self._task_start_time(t) is not None]
+        return sorted(filtered, key=sort_key)
+
     def generate_plan(self, date: datetime) -> Schedule:
         """Generate a schedule for the given date."""
-        return Schedule(date=date)
+        schedule = Schedule(date=date)
+        for task in self.sort_by_time():
+            schedule.add_task(task)
+        return schedule
 
     def rank_tasks(self) -> List[Task]:
         """Return tasks ordered by priority and other signals."""
@@ -162,9 +235,43 @@ class Scheduler:
         """Attempt to place tasks into available time windows."""
         return Schedule(date=datetime.now())
 
-    def explain_plan(self, schedule: Schedule) -> str:
-        """Return a short explanation of why tasks were scheduled the way they were."""
-        return schedule.explanation or ""
+    def _get_task_time_range(self, task: Task) -> Optional[tuple[time, time]]:
+        """Extract the effective start/end time (range) for a task.
+
+        Returns None if there is no time information available.
+        """
+        # Prefer exact scheduled time (a point in time) but treat it as a range.
+        if task.scheduled_time:
+            start = self._parse_time(task.scheduled_time)
+            if start:
+                end = (datetime.combine(date.today(), start) + timedelta(minutes=task.duration_minutes)).time()
+                return start, end
+
+        # Fallback to preferred time window
+        return task.preferred_time
+
+    def get_conflicts(self, schedule: Schedule) -> List[str]:
+        """Return a list of warnings for tasks that conflict in time."""
+        warnings: List[str] = []
+
+        ranges: List[tuple[Task, tuple[time, time]]] = []
+        for task in schedule.tasks:
+            time_range = self._get_task_time_range(task)
+            if time_range:
+                ranges.append((task, time_range))
+
+        # Compare each pair of tasks for overlap.
+        for i in range(len(ranges)):
+            task1, (start1, end1) = ranges[i]
+            for j in range(i + 1, len(ranges)):
+                task2, (start2, end2) = ranges[j]
+                # Overlap if intervals intersect
+                if start1 < end2 and start2 < end1:
+                    warnings.append(
+                        f"Conflict: '{task1.title}' and '{task2.title}' overlap in time."
+                    )
+
+        return warnings
 
     def handle_edge_cases(self) -> None:
         """Handle situations like too many tasks for available time."""
