@@ -98,7 +98,7 @@ Responsibilities: Maintain ordered tasks, detect conflicts, and provide a summar
 
 - Did your design change during implementation?
 - If yes, describe at least one change and why you made it.
-
+Yes, one class was added (a supporting class).
 ---
 
 ## 2. Scheduling Logic and Tradeoffs
@@ -119,13 +119,26 @@ Responsibilities: Maintain ordered tasks, detect conflicts, and provide a summar
 
 **a. How you used AI**
 
-- How did you use AI tools during this project (for example: design brainstorming, debugging, refactoring)?
-- What kinds of prompts or questions were most helpful?
+- I used VS Code Copilot (and the Copilot chat agent) for **design brainstorming**, **refactoring**, and **writing tests**.
+- The most helpful Copilot features were:
+  - **Inline code completion** to scaffold class methods and small helper functions quickly.
+  - **Copilot Chat** for generating test ideas, refactoring suggestions, and getting quick explanations of algorithms.
+  - The **Generate tests** smart action to bootstrap pytest cases.
 
 **b. Judgment and verification**
 
-- Describe one moment where you did not accept an AI suggestion as-is.
-- How did you evaluate or verify what the AI suggested?
+- One example where I rejected an AI suggestion: Copilot suggested implementing conflict detection by comparing only exact `scheduled_time` strings, which would miss overlapping time windows. I modified it to compare actual time intervals for better real-world behavior and clearer conflict warnings.
+- I verified AI suggestions by running the existing test suite and writing new tests that asserted the desired behavior (e.g., overlapping tasks produce a warning).
+
+**c. Chat session separation**
+
+- Splitting work into separate Copilot chat sessions helped keep each phase focused and prevented earlier discussions from polluting later ones.
+- For example, the “design” session focused on class structure, while the “testing” session focused purely on edge cases and test coverage.
+
+**d. Being the lead architect**
+
+- Working with AI means you still need to **decide what’s important**, choose tradeoffs, and keep the system coherent.
+- I treated Copilot as a helpful partner that can prototype ideas quickly, but I always reviewed suggestions for correctness and maintainability before accepting them.
 
 ---
 
@@ -133,13 +146,21 @@ Responsibilities: Maintain ordered tasks, detect conflicts, and provide a summar
 
 **a. What you tested**
 
-- What behaviors did you test?
-- Why were these tests important?
+- I tested that values are tracked correctly on the domain layer (a `Pet` knows how many tasks it has).
+- I verified that the scheduler correctly sorts tasks by time and filters out tasks that have no time information.
+- I tested recurrence logic so that marking a daily task complete produces a new task due the next day.
+- I tested conflict detection to ensure overlapping tasks generate a warning.
+
+These tests are important because they validate the core behaviors that make the scheduler useful: ordering tasks, repeating them on a cadence, and alerting the user when the plan conflicts.
 
 **b. Confidence**
 
-- How confident are you that your scheduler works correctly?
-- What edge cases would you test next if you had more time?
+- I'm reasonably confident the core scheduler logic works for the documented behaviors. The tests cover the main happy paths and a few common edge cases.
+- If I had more time, I would write additional tests for:
+  - multiple pets and shared resources (tasks that conflict across different pets)
+  - tasks with missing or invalid time strings
+  - recurrence patterns beyond daily/weekly (e.g., every other day)
+  - tasks that span midnight or cross multiple days
 
 ---
 
@@ -147,12 +168,14 @@ Responsibilities: Maintain ordered tasks, detect conflicts, and provide a summar
 
 **a. What went well**
 
-- What part of this project are you most satisfied with?
+- I’m most satisfied with getting a working backend scheduler with tests, and then plugging that into the UI quickly so it feels like a real app.
+- The combination of small, focused unit tests and a simple Streamlit UI made it easy to iterate without breaking existing behavior.
 
 **b. What you would improve**
 
-- If you had another iteration, what would you improve or redesign?
+- I would improve the scheduler to support multi-pet planning (so the owner can see a full day across all pets) and more flexible conflict resolution (e.g., suggest alternative times).
+- I would also make the recurrence system more robust, supporting more patterns and letting the user edit the next occurrence.
 
 **c. Key takeaway**
 
-- What is one important thing you learned about designing systems or working with AI on this project?
+- Building with AI as a partner is most effective when you stay in control of the architecture: decide the responsibilities, verify suggestions with tests, and keep the system simple enough to reason about.

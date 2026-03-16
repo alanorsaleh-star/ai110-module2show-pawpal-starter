@@ -90,19 +90,26 @@ if st.session_state.pets:
     pet_names = [p.name for p in st.session_state.pets]
     selected_pet_index = st.selectbox("Assign task to", range(len(pet_names)), format_func=lambda i: pet_names[i])
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns([2, 1, 1, 1])
 with col1:
     task_title = st.text_input("Task title", value="Morning walk")
 with col2:
     duration = st.number_input("Duration (minutes)", min_value=1, max_value=240, value=20)
 with col3:
+    scheduled_time = st.text_input("Scheduled time (HH:MM)", value="08:00")
+with col4:
     priority = st.selectbox("Priority", ["low", "medium", "high"], index=2)
 
 if st.button("Add task"):
     if not st.session_state.pets:
         st.warning("Add a pet first before assigning tasks.")
     else:
-        task = Task(title=task_title, duration_minutes=int(duration), priority=priority)
+        task = Task(
+            title=task_title,
+            duration_minutes=int(duration),
+            priority=priority,
+            scheduled_time=scheduled_time.strip(),
+        )
         pet = st.session_state.pets[selected_pet_index]
         pet.add_task(task)
         st.session_state.tasks.append(task)
@@ -134,12 +141,28 @@ if st.button("Generate schedule"):
         owner = st.session_state.owner
         pet = st.session_state.pets[0]
         scheduler = Scheduler(owner=owner, pet=pet, tasks=pet.tasks)
+
+        # Build the schedule using the scheduler logic.
         schedule = scheduler.generate_plan(date=datetime.now())
 
-        # Fallback: if generate_plan doesn't yet populate tasks, use the pet tasks.
-        if not schedule.tasks:
-            for t in pet.tasks:
-                schedule.add_task(t)
+        # Display sorted tasks.
+        scheduled_tasks = [
+            {
+                "Task": t.title,
+                "Start": t.scheduled_time or "(no time)",
+                "Duration": t.duration_minutes,
+                "Priority": t.priority,
+            }
+            for t in schedule.tasks
+        ]
 
-        st.markdown("### Today's Schedule")
-        st.markdown(schedule.summarize())
+        st.success("Schedule generated")
+        st.table(scheduled_tasks)
+
+        # Detect conflicts and show warnings.
+        conflicts = scheduler.get_conflicts(schedule)
+        if conflicts:
+            for c in conflicts:
+                st.warning(c)
+        else:
+            st.info("No scheduling conflicts detected.")
